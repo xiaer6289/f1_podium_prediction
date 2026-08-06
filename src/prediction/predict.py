@@ -10,7 +10,7 @@ FEATURES = [
 MODEL_PATHS = {
     "Random Forest" : "models/random_forest_tuned.pkl",
     "SVM": "models/svm_tuned.pkl",
-    # "KNN": "models/knn.pkl"
+    "KNN": "models/knn.pkl"
 }
 
 # load scaler & imputer

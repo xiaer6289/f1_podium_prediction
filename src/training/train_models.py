@@ -10,6 +10,8 @@ from imblearn.over_sampling import SMOTE
 
 # load processed data
 df = pd.read_csv("data/processed/final.csv")
+print("\nFirst 10 rows of the loaded dataset:")
+print(df.head(10))
 
 FEATURES = [
     'grid', 'qualifying_position', 
