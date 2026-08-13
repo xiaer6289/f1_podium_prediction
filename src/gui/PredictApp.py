@@ -44,12 +44,15 @@ class PredictApp:
 
         self.tab_processing = ttk.Frame(self.notebook)
         self.tab_prediction = ttk.Frame(self.notebook)
+        self.tab_evaluation = ttk.Frame(self.notebook)
 
         self.notebook.add(self.tab_processing, text="Data Processing")
+        self.notebook.add(self.tab_evaluation, text="Model Evaluation")
         self.notebook.add(self.tab_prediction, text="Prediction Model")
 
         self.build_processing_widgets()
         self.build_widgets(self.tab_prediction)
+        self.build_evaluation_widgets(self.tab_evaluation)
 
     def build_processing_widgets(self):
         left_frame = tk.Frame(self.tab_processing, width=220, bg="#f8f9fa")
@@ -448,6 +451,113 @@ class PredictApp:
             self.result_text.insert(tk.END, f"{conf_str}\n", "info")
             
         self.result_text.config(state="disabled")
+
+    def build_evaluation_widgets(self, parent):
+        main_frame = tk.Frame(parent, bg="#f8f9fa")
+        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
+        
+        tk.Label(main_frame, text="📊 Model Evaluation", font=("Segoe UI", 18, "bold"), bg="#f8f9fa", fg="#2C3E50").pack(pady=(0, 20))
+        
+        controls_frame = tk.Frame(main_frame, bg="#f8f9fa")
+        controls_frame.pack(pady=10)
+        
+        tk.Label(controls_frame, text="Select Model:", font=("Segoe UI", 10, "bold"), bg="#f8f9fa").pack(side="left", padx=5)
+        self.eval_model_var = tk.StringVar()
+        self.eval_model_dropdown = ttk.Combobox(controls_frame, textvariable=self.eval_model_var, 
+                                                values=["Random Forest", "SVM", "KNN", "Compare Model"], state="readonly", width=20)
+        self.eval_model_dropdown.current(0)
+        self.eval_model_dropdown.pack(side="left", padx=5)
+        
+        self.eval_canvas_frame = tk.Frame(main_frame, bg="white", highlightbackground="#dee2e6", highlightthickness=1)
+        self.eval_canvas_frame.pack(expand=True, fill="both", padx=40, pady=10)
+        
+        tk.Button(main_frame, text="Generate Confusion Matrix", command=self.generate_confusion_matrix, bg="#3498DB", fg="white", 
+                  font=("Segoe UI", 12, "bold"), activebackground="#2980B9", activeforeground="white",
+                  relief="flat", cursor="hand2", padx=40, pady=10).pack(pady=20)
+
+    def generate_confusion_matrix(self):
+        if df.empty:
+            messagebox.showerror("Error", "Data is not loaded correctly.")
+            return
+
+        try:
+            for widget in self.eval_canvas_frame.winfo_children():
+                widget.destroy()
+
+            # pyrefly: ignore [missing-import]
+            import joblib
+            from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+            # pyrefly: ignore [missing-import]
+            import matplotlib.pyplot as plt
+            # pyrefly: ignore [missing-import]
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            import os
+            
+            temp_df = df.copy()
+            if 'year' in temp_df.columns:
+                temp_df = temp_df[temp_df['year'] >= 2023]
+            
+            # final.csv has a 'podium' column
+            target_col = 'podium' if 'podium' in temp_df.columns else 'Podium'
+
+            # pyrefly: ignore [missing-import]
+            from predict import FEATURES
+            
+            # Drop rows only if the target is missing (features will be imputed)
+            subset = temp_df.dropna(subset=[target_col])
+            
+            selected_model = self.eval_model_var.get()
+            
+            # Paths to models
+            base_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+            
+            model_files = {
+                "KNN": "knn.pkl",
+                "Random Forest": "random_forest.pkl",
+                "SVM": "svm.pkl"
+            }
+            
+            if selected_model == "Compare Model":
+                import subprocess
+                import sys
+                script_path = os.path.join(base_dir, 'src', 'training', 'compare_models.py')
+                subprocess.Popen([sys.executable, script_path])
+                return
+            
+            model_path = os.path.join(base_dir, 'models', model_files[selected_model])
+            imputer_path = os.path.join(base_dir, 'models', 'imputer.pkl')
+            scaler_path = os.path.join(base_dir, 'models', 'scaler.pkl')
+            
+            model = joblib.load(model_path)
+            imputer = joblib.load(imputer_path)
+            scaler = joblib.load(scaler_path)
+            
+            X = subset[FEATURES]
+            y_true = subset[target_col]
+            
+            X_imp = imputer.transform(X)
+            X_scaled = scaler.transform(X_imp)
+            
+            y_pred = model.predict(X_scaled)
+            
+            cm = confusion_matrix(y_true, y_pred)
+            
+            if selected_model == "KNN" or selected_model == "Random Forest" or selected_model == "SVM":
+                fig, ax = plt.subplots(figsize=(6, 5))
+                disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No Podium", "Podium"])
+                disp.plot(cmap="Blues", ax=ax)
+                ax.set_title(f"{selected_model} Confusion Matrix")
+                
+                canvas = FigureCanvasTkAgg(fig, master=self.eval_canvas_frame)
+                canvas.draw()
+                canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+            else:
+                # Leave drawing the graph to the teammate
+                placeholder_text = f"{selected_model} Confusion Matrix Computed!\n\nRaw Output:\n{cm}\n\n# TODO: Teammate to add graph here."
+                tk.Label(self.eval_canvas_frame, text=placeholder_text, bg="white", font=("Consolas", 12), fg="#333333", justify="center").pack(expand=True)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to generate confusion matrix:\n{str(e)}")
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 import joblib
 import pandas as pd
 
@@ -10,7 +11,7 @@ FEATURES = [
 MODEL_PATHS = {
     "Random Forest" : "models/random_forest_tuned.pkl",
     "SVM": "models/svm_tuned.pkl",
-    "KNN": "models/knn.pkl"
+    "KNN": "models/knn_tuned.pkl"
 }
 
 # load scaler & imputer
