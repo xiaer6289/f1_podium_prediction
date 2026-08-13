@@ -521,7 +521,13 @@ class PredictApp:
                 import subprocess
                 import sys
                 script_path = os.path.join(base_dir, 'src', 'training', 'compare_models.py')
-                subprocess.Popen([sys.executable, script_path])
+                
+                # Check if the process is already running
+                if hasattr(self, 'compare_process') and self.compare_process.poll() is None:
+                    messagebox.showinfo("Info", "The Compare Model window is already open. Please check your taskbar!")
+                    return
+                    
+                self.compare_process = subprocess.Popen([sys.executable, script_path])
                 return
             
             model_path = os.path.join(base_dir, 'models', model_files[selected_model])
@@ -543,6 +549,7 @@ class PredictApp:
             cm = confusion_matrix(y_true, y_pred)
             
             if selected_model == "KNN" or selected_model == "Random Forest" or selected_model == "SVM":
+                plt.close('all')  # Close previous figures to prevent them from getting stuck
                 fig, ax = plt.subplots(figsize=(6, 5))
                 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No Podium", "Podium"])
                 disp.plot(cmap="Blues", ax=ax)
