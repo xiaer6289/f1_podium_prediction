@@ -149,7 +149,9 @@ class PredictApp:
             'qualifying': 'qualifying.csv',
             'driver_standings': 'driver_standings.csv',
             'constructor_standings': 'constructor_standings.csv',
-            'status': 'status.csv'
+            'status': 'status.csv',
+            'constructors': 'constructors.csv',
+            'drivers': 'drivers.csv'
         }
         
         dfs = {}
@@ -488,7 +490,7 @@ class PredictApp:
             import joblib
             from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
             # pyrefly: ignore [missing-import]
-            import matplotlib.pyplot as plt
+            from matplotlib.figure import Figure
             # pyrefly: ignore [missing-import]
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
             import os
@@ -505,55 +507,121 @@ class PredictApp:
             
             # Drop rows only if the target is missing (features will be imputed)
             subset = temp_df.dropna(subset=[target_col])
-            
-            selected_model = self.eval_model_var.get()
-            
+                        
             # Paths to models
             base_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+
+            imputer_path = os.path.join(base_dir, 'models', 'imputer.pkl')
+            scaler_path = os.path.join(base_dir, 'models', 'scaler.pkl')
+            imputer = joblib.load(imputer_path)
+            scaler = joblib.load(scaler_path)
+
+            # ---- Prepare X, y_true, X_scaled ONCE, before branching ----
+            X = subset[FEATURES]
+            y_true = subset[target_col]
+            X_imp = imputer.transform(X)
+            X_scaled = scaler.transform(X_imp)
+
+            selected_model = self.eval_model_var.get()
             
             model_files = {
-                "KNN": "knn.pkl",
-                "Random Forest": "random_forest.pkl",
-                "SVM": "svm.pkl"
+                "KNN": "knn_tuned.pkl",
+                "Random Forest": "random_forest_tuned.pkl",
+                "SVM": "svm_tuned.pkl"
             }
             
             if selected_model == "Compare Model":
-                import subprocess
-                import sys
-                script_path = os.path.join(base_dir, 'src', 'training', 'compare_models.py')
+                # import subprocess
+                # import sys
+                # script_path = os.path.join(base_dir, 'src', 'training', 'compare_models.py')
                 
-                # Check if the process is already running
-                if hasattr(self, 'compare_process') and self.compare_process.poll() is None:
-                    messagebox.showinfo("Info", "The Compare Model window is already open. Please check your taskbar!")
-                    return
+                # # Check if the process is already running
+                # if hasattr(self, 'compare_process') and self.compare_process.poll() is None:
+                #     messagebox.showinfo("Info", "The Compare Model window is already open. Please check your taskbar!")
+                #     return
                     
-                self.compare_process = subprocess.Popen([sys.executable, script_path])
-                return
-            
+                # self.compare_process = subprocess.Popen([sys.executable, script_path])
+                # return
+                from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+                fig = Figure(figsize=(6, 5))
+
+                compare_models = {
+                    "Random Forest": "random_forest_tuned.pkl",
+                    "SVM": "svm_tuned.pkl",
+                    "KNN": "knn_tuned.pkl"
+                }
+
+                records = []
+                for name, filename in compare_models.items():
+                    path = os.path.join(base_dir, 'models', filename)
+                    if not os.path.exists(path):
+                        continue
+                    m = joblib.load(path)
+                    preds = m.predict(X_scaled)
+                    records.append({
+                        "Model": name,
+                        "Accuracy": accuracy_score(y_true, preds),
+                        "Precision": precision_score(y_true, preds),
+                        "Recall": recall_score(y_true, preds),
+                        "F1": f1_score(y_true, preds)
+                    })
+
+                if not records:
+                    tk.Label(self.eval_canvas_frame, text="No trained models found to compare", 
+                             bg="white", font=("Consolas", 12), fg="#C0392B").pack(expand=True)
+                    return
+
+                results_df = pd.DataFrame(records)
+
+                ax = fig.add_subplot(111)
+                metrics = ["Accuracy", "Precision", "Recall", "F1"]
+                x = range(len(results_df))
+                bar_width = 0.2
+
+                for i, metric in enumerate(metrics):
+                    offsets = [pos + i * bar_width for pos in x]
+                    ax.bar(offsets, results_df[metric], width=bar_width, label=metric)
+
+                ax.set_xticks([pos + bar_width * 1.5 for pos in x])
+                ax.set_xticklabels(results_df["Model"])
+                ax.set_ylabel("Score")
+                ax.set_title("Model Comparison (Test Set)")
+                ax.set_ylim(0, 1)
+                ax.legend(fontsize=8)
+
+                fig.tight_layout()
+
+                canvas = FigureCanvasTkAgg(fig, master=self.eval_canvas_frame)
+                canvas.draw()
+                canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+                return 
+                            
             model_path = os.path.join(base_dir, 'models', model_files[selected_model])
-            imputer_path = os.path.join(base_dir, 'models', 'imputer.pkl')
-            scaler_path = os.path.join(base_dir, 'models', 'scaler.pkl')
+            # imputer_path = os.path.join(base_dir, 'models', 'imputer.pkl')
+            # scaler_path = os.path.join(base_dir, 'models', 'scaler.pkl')
             
             model = joblib.load(model_path)
-            imputer = joblib.load(imputer_path)
-            scaler = joblib.load(scaler_path)
+            # imputer = joblib.load(imputer_path)
+            # scaler = joblib.load(scaler_path)
             
-            X = subset[FEATURES]
-            y_true = subset[target_col]
+            # X = subset[FEATURES]
+            # y_true = subset[target_col]
             
-            X_imp = imputer.transform(X)
-            X_scaled = scaler.transform(X_imp)
+            # X_imp = imputer.transform(X)
+            # X_scaled = scaler.transform(X_imp)
             
             y_pred = model.predict(X_scaled)
             
             cm = confusion_matrix(y_true, y_pred)
             
             if selected_model == "KNN" or selected_model == "Random Forest" or selected_model == "SVM":
-                plt.close('all')  # Close previous figures to prevent them from getting stuck
-                fig, ax = plt.subplots(figsize=(6, 5))
+                fig = Figure(figsize=(6, 5))
+                ax = fig.add_subplot(111)
                 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No Podium", "Podium"])
                 disp.plot(cmap="Blues", ax=ax)
                 ax.set_title(f"{selected_model} Confusion Matrix")
+                fig.tight_layout()
                 
                 canvas = FigureCanvasTkAgg(fig, master=self.eval_canvas_frame)
                 canvas.draw()
