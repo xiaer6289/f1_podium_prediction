@@ -6,6 +6,8 @@ from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from imblearn.over_sampling import SMOTE 
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
 
 df = pd.read_csv("data/processed/final.csv")
 
@@ -27,9 +29,11 @@ imputer = SimpleImputer(strategy='median')
 X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=FEATURES)
 X_test = pd.DataFrame(imputer.transform(X_test), columns=FEATURES)
 
-print("Train: ", X_train.shape, " Test: ", X_test.shape)
-print("train podium rate:", y_train.mean(), " test podium rate: ", y_test.mean())
-
+print("\n" + "="*50)
+print("PHASE 1: Chronological Train-Test Split")
+print("="*50)
+print(f"Train set (2010-2022): {X_train.shape[0]:,} rows  |  Podium rate: {y_train.mean():.3f}")
+print(f"Test set  (2023-2025): {X_test.shape[0]:,} rows  |  Podium rate: {y_test.mean():.3f}")
 # scale feature
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
@@ -39,8 +43,12 @@ X_test_scaled = scaler.transform(X_test)
 smote = SMOTE(random_state=42)
 X_train_resampled, y_train_resampled = smote.fit_resample(X_train_scaled, y_train)
 
-print("train shape: ", X_train_resampled.shape)
-print("podium rate: ", y_train_resampled.mean())
+print(f"\nTrain shape after SMOTE: {X_train_resampled.shape}")
+print(f"Podium rate after SMOTE: {y_train_resampled.mean():.3f}")
+
+print("\n" + "="*50)
+print("PHASE 2: 5-Fold Cross-Validation + Final Test Evaluation")
+print("="*50)
 
 param_grid = {
     'C': [1, 10],

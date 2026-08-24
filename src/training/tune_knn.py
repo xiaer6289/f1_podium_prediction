@@ -34,6 +34,12 @@ def tune_and_train_knn():
     X_train, y_train = train_df[FEATURES], train_df[TARGET]
     X_test, y_test = test_df[FEATURES], test_df[TARGET]
 
+    print("\n" + "="*50)
+    print("PHASE 1: Chronological Train-Test Split")
+    print("="*50)
+    print(f"Train set (2010-2022): {X_train.shape[0]:,} rows  |  Podium rate: {y_train.mean():.3f}")
+    print(f"Test set  (2023-2025): {X_test.shape[0]:,} rows  |  Podium rate: {y_test.mean():.3f}")
+
     print("Imputing missing values...")
     imputer = SimpleImputer(strategy='median')
     X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=FEATURES)
@@ -49,8 +55,11 @@ def tune_and_train_knn():
     X_train_resampled, y_train_resampled = smote.fit_resample(X_train_scaled, y_train)
 
     print(f"Train shape after SMOTE: {X_train_resampled.shape}")
-    
-    print("\n--- Tuning KNN ---")
+    print(f"Podium rate after SMOTE: {y_train_resampled.mean():.3f}")
+
+    print("\n" + "="*50)
+    print("PHASE 2: 5-Fold Cross-Validation + Final Test Evaluation")
+    print("="*50)
     k_values = range(1, 26)
     cv_scores = []
 
@@ -87,7 +96,7 @@ def tune_and_train_knn():
     models_dir = os.path.join(base_dir, "models")
     os.makedirs(models_dir, exist_ok=True)
     
-    model_path = os.path.join(models_dir, "knn.pkl")
+    model_path = os.path.join(models_dir, "knn_tuned.pkl")
     joblib.dump(knn_final, model_path)
     print(f"KNN model successfully saved to {model_path}")
 

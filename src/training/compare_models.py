@@ -1,6 +1,8 @@
 import pandas as pd
 import joblib 
 import os
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
@@ -49,8 +51,8 @@ for name, path in MODEL_FILES.items():
         "F1": f1_score(y_test, preds)
     })
 
-    results_df = pd.DataFrame(records)
-    print(results_df)
+results_df = pd.DataFrame(records)
+print(results_df)
 
 os.makedirs("reports", exist_ok=True)
 results_df.to_csv("reports/model_comparison.csv", index=False)
