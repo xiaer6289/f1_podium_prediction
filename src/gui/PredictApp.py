@@ -531,17 +531,7 @@ class PredictApp:
             }
             
             if selected_model == "Compare Model":
-                # import subprocess
-                # import sys
-                # script_path = os.path.join(base_dir, 'src', 'training', 'compare_models.py')
                 
-                # # Check if the process is already running
-                # if hasattr(self, 'compare_process') and self.compare_process.poll() is None:
-                #     messagebox.showinfo("Info", "The Compare Model window is already open. Please check your taskbar!")
-                #     return
-                    
-                # self.compare_process = subprocess.Popen([sys.executable, script_path])
-                # return
                 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
                 fig = Figure(figsize=(6, 5))
