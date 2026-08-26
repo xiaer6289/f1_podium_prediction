@@ -588,19 +588,9 @@ class PredictApp:
                 return 
                             
             model_path = os.path.join(base_dir, 'models', model_files[selected_model])
-            # imputer_path = os.path.join(base_dir, 'models', 'imputer.pkl')
-            # scaler_path = os.path.join(base_dir, 'models', 'scaler.pkl')
             
             model = joblib.load(model_path)
-            # imputer = joblib.load(imputer_path)
-            # scaler = joblib.load(scaler_path)
-            
-            # X = subset[FEATURES]
-            # y_true = subset[target_col]
-            
-            # X_imp = imputer.transform(X)
-            # X_scaled = scaler.transform(X_imp)
-            
+           
             y_pred = model.predict(X_scaled)
             
             cm = confusion_matrix(y_true, y_pred)
@@ -617,8 +607,7 @@ class PredictApp:
                 canvas.draw()
                 canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
             else:
-                # Leave drawing the graph to the teammate
-                placeholder_text = f"{selected_model} Confusion Matrix Computed!\n\nRaw Output:\n{cm}\n\n# TODO: Teammate to add graph here."
+                placeholder_text = f"{selected_model} Confusion Matrix Computed!\n\nRaw Output:\n{cm}\n\n"
                 tk.Label(self.eval_canvas_frame, text=placeholder_text, bg="white", font=("Consolas", 12), fg="#333333", justify="center").pack(expand=True)
             
         except Exception as e:
